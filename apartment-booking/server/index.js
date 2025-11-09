@@ -20,12 +20,19 @@ const PORT = process.env.PORT || 3001;
 initDatabase();
 
 // Настраиваем middleware (промежуточные обработчики)
-app.use(cors()); // Разрешаем запросы с фронтенда
+// Настраиваем CORS с более безопасными опциями
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://your-domain.com'] // В продакшене разрешаем только конкретные домены
+    : 'http://localhost:3000', // В разработке разрешаем фронтенд
+  credentials: true, // Разрешаем отправку куки и авторизационных заголовков
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-// ВАЖНО: Увеличиваем лимит размера запроса для загрузки изображений
-// 50mb - это достаточно для большинства изображений в base64
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// Защита от DDoS: ограничиваем размер запросов
+app.use(express.json({ limit: '10mb' })); // Уменьшаем до разумного предела
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Подключаем маршруты API
 app.use('/api/auth', authRouter);

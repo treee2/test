@@ -11,10 +11,25 @@ const __dirname = path.dirname(__filename);
 const dbPath = path.join(__dirname, 'apartments.db');
 
 // Создаём или открываем базу данных
-const db = new Database(dbPath);
+let db;
+try {
+  db = new Database(dbPath);
+  
+  // Создаём бэкап перед инициализацией
+  if (fs.existsSync(dbPath)) {
+    const backupPath = `${dbPath}.backup-${Date.now()}`;
+    fs.copyFileSync(dbPath, backupPath);
+    console.log(`📦 Создан бэкап базы данных: ${backupPath}`);
+  }
 
-// Включаем поддержку внешних ключей (это важно для связей между таблицами)
-db.pragma('foreign_keys = ON');
+  // Включаем поддержку внешних ключей и другие важные PRAGMA
+  db.pragma('foreign_keys = ON');
+  db.pragma('journal_mode = WAL'); // Улучшаем производительность
+  db.pragma('synchronous = NORMAL'); // Баланс между безопасностью и скоростью
+} catch (error) {
+  console.error('❌ Ошибка при создании/открытии базы данных:', error);
+  throw error;
+}
 
 // Функция для инициализации базы данных
 export function initDatabase() {

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { toast } from "sonner";
 
 export default function Payment() {
   const navigate = useNavigate();
@@ -60,18 +61,59 @@ export default function Payment() {
     enabled: !!booking?.apartment_id,
   });
 
+  const updateBookingMutation = useMutation({
+    mutationFn: ({ id, status }) => base44.entities.Booking.update(id, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+
   const createPaymentMutation = useMutation({
-    mutationFn: (paymentData) => base44.entities.Payment.create(paymentData),
+    mutationFn: async (paymentData) => {
+      // Создаем платеж
+      const payment = await base44.entities.Payment.create(paymentData);
+      // Обновляем статус бронирования на "completed"
+      await updateBookingMutation.mutateAsync({ 
+        id: bookingId, 
+        status: "completed" 
+      });
+      return payment;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
-      navigate(createPageUrl("MyBookings"));
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      toast.success("Оплата успешно завершена!");
+      // Небольшая задержка перед перенаправлением
+      setTimeout(() => {
+        navigate(createPageUrl("MyBookings"));
+      }, 1500);
     },
+    onError: (error) => {
+      toast.error("Ошибка при обработке платежа");
+      console.error(error);
+    }
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    await createPaymentMutation.mutateAsync({
+    // Валидация полей карты если выбрана оплата картой
+    if (paymentMethod === "card") {
+      if (!cardNumber || cardNumber.length < 16) {
+        toast.error("Введите корректный номер карты");
+        return;
+      }
+      if (!cardExpiry || cardExpiry.length < 5) {
+        toast.error("Введите срок действия карты");
+        return;
+      }
+      if (!cardCvv || cardCvv.length < 3) {
+        toast.error("Введите CVV код");
+        return;
+      }
+    }
+    
+    createPaymentMutation.mutate({
       booking_id: bookingId,
       amount: booking.total_price,
       payment_method: paymentMethod,
@@ -221,41 +263,55 @@ export default function Payment() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <Label htmlFor="cardNumber">Номер карты</Label>
+                      <Label htmlFor="cardNumber">Номер карты *</Label>
                       <Input
                         id="cardNumber"
                         value={cardNumber}
-                        onChange={(e) => setCardNumber(e.target.value)}
-                        placeholder="1234 5678 9012 3456"
-                        maxLength={19}
+                        onChange={(e) => {
+                          // Убираем все нецифровые символы
+                          const value = e.target.value.replace(/\D/g, '');
+                          setCardNumber(value);
+                        }}
+                        placeholder="1234567890123456"
+                        maxLength={16}
                         className="mt-2"
-                        required
+                        required={paymentMethod === "card"}
                       />
+                      <p className="text-xs text-slate-500 mt-1">Введите 16 цифр без пробелов</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="cardExpiry">Срок действия</Label>
+                        <Label htmlFor="cardExpiry">Срок действия *</Label>
                         <Input
                           id="cardExpiry"
                           value={cardExpiry}
-                          onChange={(e) => setCardExpiry(e.target.value)}
+                          onChange={(e) => {
+                            let value = e.target.value.replace(/\D/g, '');
+                            if (value.length >= 2) {
+                              value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                            }
+                            setCardExpiry(value);
+                          }}
                           placeholder="MM/YY"
                           maxLength={5}
                           className="mt-2"
-                          required
+                          required={paymentMethod === "card"}
                         />
                       </div>
                       <div>
-                        <Label htmlFor="cardCvv">CVV</Label>
+                        <Label htmlFor="cardCvv">CVV *</Label>
                         <Input
                           id="cardCvv"
                           type="password"
                           value={cardCvv}
-                          onChange={(e) => setCardCvv(e.target.value)}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '');
+                            setCardCvv(value);
+                          }}
                           placeholder="123"
                           maxLength={3}
                           className="mt-2"
-                          required
+                          required={paymentMethod === "card"}
                         />
                       </div>
                     </div>
@@ -269,7 +325,7 @@ export default function Payment() {
                 disabled={createPaymentMutation.isPending}
               >
                 {createPaymentMutation.isPending ? (
-                  "Обработка..."
+                  "Обработка платежа..."
                 ) : (
                   <>
                     <CheckCircle2 className="w-5 h-5 mr-2" />

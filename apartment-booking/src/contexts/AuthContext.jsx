@@ -1,10 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-// Создаем контекст для хранения данных аутентификации
-// Это позволит любому компоненту в приложении получить доступ к информации о текущем пользователе
 const AuthContext = createContext(null);
 
-// Хук для удобного доступа к контексту
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -13,34 +10,26 @@ export const useAuth = () => {
   return context;
 };
 
-// Провайдер контекста - оборачиваем им все приложение
 export const AuthProvider = ({ children }) => {
-  // Состояние для хранения email текущего пользователя
-  // При первой загрузке пытаемся получить email из localStorage
-  const [currentUserEmail, setCurrentUserEmail] = useState(() => {
-    return localStorage.getItem('currentUserEmail') || null;
+  // Проверяем наличие токена при загрузке
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return !!localStorage.getItem('authToken');
   });
 
-  // Функция для входа в систему
-  // Сохраняем email пользователя и записываем его в localStorage
-  const login = (email) => {
-    setCurrentUserEmail(email);
-    localStorage.setItem('currentUserEmail', email);
+  const login = (token) => {
+    localStorage.setItem('authToken', token);
+    setIsAuthenticated(true);
   };
 
-  // Функция для выхода из системы
-  // Очищаем состояние и удаляем данные из localStorage
   const logout = () => {
-    setCurrentUserEmail(null);
-    localStorage.removeItem('currentUserEmail');
+    localStorage.removeItem('authToken');
+    setIsAuthenticated(false);
   };
 
-  // Значение, которое будет доступно всем компонентам через useAuth()
   const value = {
-    currentUserEmail,
+    isAuthenticated,
     login,
     logout,
-    isAuthenticated: !!currentUserEmail // true если пользователь авторизован
   };
 
   return (

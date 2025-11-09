@@ -24,27 +24,26 @@ export default function Login() {
   const [error, setError] = useState("");
 
   // Обработчик отправки формы
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError("");
+  setIsLoading(true);
 
-    try {
-      // Отправляем запрос на сервер для проверки учетных данных
-      const user = await base44.auth.login(formData.login, formData.password);
-      
-      // Если вход успешен, сохраняем email пользователя в контексте
-      login(user.email);
-      
-      // Перенаправляем на главную страницу
-      navigate(createPageUrl("Apartments"));
-    } catch (err) {
-      // Отображаем ошибку пользователю
-      setError(err.message || "Ошибка при входе в систему");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  try {
+    // Теперь base44.auth.login сохраняет токен автоматически и возвращает user
+    const user = await base44.auth.login(formData.login, formData.password);
+    
+    // Обновляем состояние авторизации
+    login(localStorage.getItem('authToken'));
+    
+    // Перенаправляем на главную страницу
+    navigate(createPageUrl("Apartments"));
+  } catch (err) {
+    setError(err.message || "Ошибка при входе в систему");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 via-white to-indigo-50">

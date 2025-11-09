@@ -43,10 +43,10 @@ CREATE TABLE apartments (
     description TEXT,
     city TEXT NOT NULL,  -- Добавлено обязательное поле города
     address TEXT,
-    price_per_night REAL NOT NULL,
-    bedrooms INTEGER NOT NULL,
-    bathrooms INTEGER DEFAULT 1,
-    max_guests INTEGER DEFAULT 2,
+    price_per_night REAL NOT NULL CHECK(price_per_night >= 0),
+    bedrooms INTEGER NOT NULL CHECK(bedrooms > 0),
+    bathrooms INTEGER DEFAULT 1 CHECK(bathrooms > 0),
+    max_guests INTEGER DEFAULT 2 CHECK(max_guests > 0),
     is_available INTEGER DEFAULT 1,
     amenities TEXT,  -- Храним JSON-строку с удобствами
     image_filename TEXT,

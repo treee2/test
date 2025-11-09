@@ -13,13 +13,13 @@ import ApartmentForm from "../components/apartments/ApartmentForm";
 export default function AddApartment() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentUserEmail } = useAuth();
-  const [successMessage, setSuccessMessage] = useState(false);
 
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser', currentUserEmail],
-    queryFn: () => base44.auth.me(currentUserEmail),
-    enabled: !!currentUserEmail,
+  const [successMessage, setSuccessMessage] = useState(false);
+// В любом компоненте
+  const { data: user, isLoading } = useQuery({
+
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(), // Токен отправляется автоматически!
   });
 
   const createApartmentMutation = useMutation({
