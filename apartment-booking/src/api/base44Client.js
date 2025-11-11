@@ -56,9 +56,23 @@ async function fetchAPI(endpoint, options = {}) {
 }
 
 export const base44 = {
-  // ... остальной код entities остаётся без изменений
-  
   auth: {
+    // Регистрация нового пользователя
+    register: async (email, password, full_name) => {
+      const response = await fetchAPI('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ email, password, full_name }),
+      });
+      
+      // Сохраняем токен после успешной регистрации
+      if (response.token) {
+        setToken(response.token);
+      }
+      
+      return response.user;
+    },
+    
+    // Вход в систему
     login: async (login, password) => {
       const response = await fetchAPI('/auth/login', {
         method: 'POST',
@@ -73,11 +87,12 @@ export const base44 = {
       return response.user;
     },
     
+    // Получить текущего пользователя
     me: async () => {
-      // Теперь не нужен email — берём данные из токена на сервере
       return await fetchAPI('/auth/me');
     },
     
+    // Обновить профиль
     updateMe: async (profileData) => {
       return await fetchAPI('/users/me', {
         method: 'PUT',
@@ -85,11 +100,13 @@ export const base44 = {
       });
     },
     
+    // Выход из системы
     logout: () => {
       removeToken();
       window.location.href = '/login';
     },
     
+    // Обновить токен
     refresh: async () => {
       const response = await fetchAPI('/auth/refresh', {
         method: 'POST',
@@ -100,8 +117,138 @@ export const base44 = {
       }
       
       return response;
+    },
+    
+    // Проверить доступность email
+    checkEmail: async (email) => {
+      return await fetchAPI('/auth/check-email', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
     }
   },
   
-  // Остальные методы остаются без изменений
+  entities: {
+    Apartment: {
+      list: async (orderBy = '-created_date') => {
+        return await fetchAPI('/apartments');
+      },
+      
+      filter: async (filters) => {
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== null && value !== undefined) {
+            params.append(key, value);
+          }
+        });
+        return await fetchAPI(`/apartments?${params}`);
+      },
+      
+      create: async (data) => {
+        return await fetchAPI('/apartments', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        });
+      },
+      
+      update: async (id, data) => {
+        return await fetchAPI(`/apartments/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        });
+      },
+      
+      delete: async (id) => {
+        return await fetchAPI(`/apartments/${id}`, {
+          method: 'DELETE',
+        });
+      }
+    },
+    
+    Booking: {
+      list: async (orderBy = '-created_date') => {
+        return await fetchAPI('/bookings');
+      },
+      
+      filter: async (filters) => {
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== null && value !== undefined) {
+            params.append(key, value);
+          }
+        });
+        return await fetchAPI(`/bookings?${params}`);
+      },
+      
+      create: async (data) => {
+        return await fetchAPI('/bookings', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        });
+      },
+      
+      update: async (id, data) => {
+        return await fetchAPI(`/bookings/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        });
+      }
+    },
+    
+    Review: {
+      list: async (orderBy = '-created_date') => {
+        return await fetchAPI('/reviews');
+      },
+      
+      filter: async (filters) => {
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== null && value !== undefined) {
+            params.append(key, value);
+          }
+        });
+        const apartments = await fetchAPI(`/reviews?${params}`);
+        return apartments.filter(apt => {
+          return Object.entries(filters).every(([key, value]) => {
+            if (key === 'id') return apt.id === value;
+            if (key === 'apartment_id') return apt.apartment_id === value;
+            if (key === 'booking_id') return apt.booking_id === value;
+            return true;
+          });
+        });
+      },
+      
+      create: async (data) => {
+        return await fetchAPI('/reviews', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        });
+      }
+    },
+    
+    User: {
+      list: async (orderBy = '-created_date') => {
+        return await fetchAPI('/users');
+      },
+      
+      filter: async (filters) => {
+        const users = await fetchAPI('/users');
+        return users.filter(user => {
+          return Object.entries(filters).every(([key, value]) => {
+            if (key === 'email') return user.email === value;
+            if (key === 'id') return user.id === value;
+            if (key === 'role') return user.role === value;
+            return true;
+          });
+        });
+      },
+      
+      update: async (id, data) => {
+        return await fetchAPI(`/users/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        });
+      }
+    }
+  }
 };

@@ -22,13 +22,12 @@ initDatabase();
 // Настраиваем middleware (промежуточные обработчики)
 // Настраиваем CORS с более безопасными опциями
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-domain.com'] // В продакшене разрешаем только конкретные домены
-    : 'http://localhost:3000', // В разработке разрешаем фронтенд
-  credentials: true, // Разрешаем отправку куки и авторизационных заголовков
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization']
 }));
+
 
 // Защита от DDoS: ограничиваем размер запросов
 app.use(express.json({ limit: '10mb' })); // Уменьшаем до разумного предела
